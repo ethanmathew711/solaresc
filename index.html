@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>WorldTime 🌍 | World Clock & Day/Night Explorer</title>
+
+<!-- Leaflet Map -->
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    background:#02050a;
+    color:white;
+    overflow-x:hidden;
+}
+
+button,
+input{
+    font:inherit;
+}
+
+button{
+    cursor:pointer;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+header{
+    position:sticky;
+    top:0;
+    z-index:1000;
+
+    background:rgba(2,5,10,.92);
+    backdrop-filter:blur(15px);
+
+    border-bottom:1px solid #1c344b;
+}
+
+.nav{
+    max-width:1250px;
+    margin:auto;
+
+    padding:14px 20px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:15px;
+}
+
+.logo{
+    font-size:22px;
+    font-weight:bold;
+}
+
+nav a{
+    color:#bcd5ec;
+    text-decoration:none;
+    margin-left:18px;
+    font-size:14px;
+}
+
+nav a:hover{
+    color:#fff;
+}
+
+
+/* =====================================================
+   HERO
+===================================================== */
+
+.hero{
+    min-height:610px;
+
+    position:relative;
+    overflow:hidden;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+
+    text-align:center;
+
+    padding:65px 15px 20px;
+
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            #173e62 0%,
+            #081727 35%,
+            #02050a 75%,
+            #000 100%
+        );
+}
+
+.stars{
+    position:absolute;
+    inset:0;
+
+    opacity:.4;
+
+    background-image:
+        radial-gradient(#fff 1px,transparent 1px),
+        radial-gradient(#fff 1px,transparent 1px);
+
+    background-size:90px 90px,140px 140px;
+
+    background-position:0 0,40px 30px;
+}
+
+.hero-content{
+    position:relative;
+    z-index:20;
+}
+
+.hero h1{
+    font-size:clamp(38px,8vw,70px);
+
+    text-shadow:
+        0 0 20px #4fa9df,
+        0 0 50px #23618d;
+}
+
+.subtitle{
+    color:#a9c2da;
+    margin-top:12px;
+    font-size:16px;
+}
+
+
+/* =====================================================
+   SPACE
+===================================================== */
+
+.space{
+    width:min(950px,100%);
+    height:340px;
+
+    position:relative;
+
+    z-index:10;
+
+    margin-top:15px;
+}
+
+
+/* =====================================================
+   EARTH
+===================================================== */
+
+.earth{
+    position:absolute;
+
+    left:50%;
+    top:55%;
+
+    width:170px;
+    height:170px;
+
+    transform:translate(-50%,-50%);
+
+    border-radius:50%;
+
+    overflow:hidden;
+
+    background:
+        radial-gradient(
+            circle at 30% 30%,
+            #58c2ff,
+            #1379b5 45%,
+            #06416c 75%,
+            #011b2c
+        );
+
+    border:2px solid #75ceff;
+
+    box-shadow:
+        0 0 25px #1b9be5,
+        0 0 80px rgba(40,160,240,.45),
+        inset -35px -20px 45px rgba(0,0,0,.7);
+
+    z-index:5;
+}
+
+.earth::before{
+    content:"";
+
+    position:absolute;
+
+    width:55px;
+    height:30px;
+
+    background:#3ca95b;
+
+    border-radius:60% 30% 50% 30%;
+
+    left:35px;
+    top:35px;
+
+    transform:rotate(-15deg);
+
+    box-shadow:
+        50px 35px 0 #26914a,
+        15px 65px 0 #4ab65d,
+        70px 75px 0 #2d8c48;
+}
+
+.earth::after{
+    content:"";
+
+    position:absolute;
+    inset:0;
+
+    border-radius:50%;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent 50%,
+            rgba(0,0,0,.65)
+        );
+}
+
+
+/* =====================================================
+   SUN
+===================================================== */
+
+.sun{
+    position:absolute;
+
+    width:62px;
+    height:62px;
+
+    left:50%;
+    top:7%;
+
+    transform:translate(-50%,-50%);
+
+    border-radius:50%;
+
+    background:
+        radial-gradient(
+            circle,
+            #fffbd0,
+            #ffe55c 35%,
+            #ff9d00 70%,
+            #ff4d00
+        );
+
+    box-shadow:
+        0 0 25px white,
+        0 0 55px #ffd000,
+        0 0 110px #ff7300;
+
+    z-index:8;
+}
+
+
+/* =====================================================
+   MOON
+===================================================== */
+
+.moon-orbit{
+    position:absolute;
+
+    left:50%;
+    top:55%;
+
+    width:380px;
+    height:205px;
+
+    transform:translate(-50%,-50%);
+
+    border:1px dashed rgba(180,220,255,.35);
+
+    border-radius:50%;
+
+    animation:
+        orbit 16s linear infinite;
+
+    z-index:7;
+}
+
+.moon{
+    position:absolute;
+
+    right:-20px;
+    top:50%;
+
+    width:42px;
+    height:42px;
+
+    transform:translateY(-50%);
+
+    border-radius:50%;
+
+    background:
+        radial-gradient(
+            circle at 35% 30%,
+            #fff,
+            #d7dbe0 55%,
+            #777
+        );
+
+    box-shadow:
+        0 0 15px #fff,
+        0 0 35px rgba(255,255,255,.7);
+}
+
+@keyframes orbit{
+
+    from{
+        transform:
+            translate(-50%,-50%)
+            rotate(0deg);
+    }
+
+    to{
+        transform:
+            translate(-50%,-50%)
+            rotate(360deg);
+    }
+
+}
+
+
+/* =====================================================
+   INFORMATION
+===================================================== */
+
+.info{
+    position:absolute;
+
+    bottom:0;
+    left:50%;
+
+    transform:translateX(-50%);
+
+    width:100%;
+
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    z-index:30;
+}
+
+.info span{
+    padding:9px 13px;
+
+    border-radius:20px;
+
+    background:rgba(3,12,22,.9);
+
+    border:1px solid #29445f;
+
+    font-size:13px;
+}
+
+
+/* =====================================================
+   SECTIONS
+===================================================== */
+
+section{
+    padding:55px 15px;
+}
+
+.section-title{
+    text-align:center;
+
+    max-width:850px;
+
+    margin:0 auto 30px;
+}
+
+.section-title h2{
+    font-size:clamp(30px,6vw,48px);
+}
+
+.section-title p{
+    color:#9db3c8;
+
+    margin-top:10px;
+
+    line-height:1.6;
+}
+
+
+/* =====================================================
+   CLOCK
+===================================================== */
+
+.clock-section{
+    background:
+        linear-gradient(
+            180deg,
+            #07111e,
+            #02050a
+        );
+}
+
+.search{
+    max-width:600px;
+
+    margin:0 auto 30px;
+
+    display:flex;
+
+    gap:10px;
+}
+
+.search input{
+    flex:1;
+
+    padding:14px;
+
+    border-radius:12px;
+
+    border:1px solid #29445f;
+
+    background:#07111d;
+
+    color:white;
+
+    outline:none;
+}
+
+.search button{
+    border:0;
+
+    border-radius:12px;
+
+    padding:0 20px;
+
+    background:#1688d4;
+
+    color:white;
+}
+
+.search button:hover{
+    background:#1da0f2;
+}
+
+.clock-grid{
+    max-width:1250px;
+
+    margin:auto;
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(auto-fit,minmax(220px,1fr));
+
+    gap:15px;
+}
+
+.clock-card{
+    background:
+        linear-gradient(
+            145deg,
+            #0b1b2b,
+            #06101b
+        );
+
+    border:1px solid #1d3b55;
+
+    border-radius:18px;
+
+    padding:20px;
+
+    transition:.25s;
+}
+
+.clock-card:hover{
+    transform:translateY(-4px);
+
+    border-color:#3c8dc2;
+}
+
+.city{
+    font-size:20px;
+    font-weight:bold;
+}
+
+.country{
+    color:#7fa1bd;
+    font-size:13px;
+    margin-top:4px;
+}
+
+.time{
+    font-size:30px;
+
+    margin-top:15px;
+
+    color:#7bd0ff;
+
+    font-weight:bold;
+}
+
+.daynight{
+    margin-top:8px;
+    color:#c7d6e3;
+}
+
+
+/* =====================================================
+   WORLD MAP
+===================================================== */
+
+.world-section{
+    background:
+        radial-gradient(
+            circle at 50% 20%,
+            #0d2e49,
+            #01070d 70%
+        );
+}
+
+.map-wrapper{
+    width:min(1400px,96vw);
+
+    margin:auto;
+
+    position:relative;
+}
+
+#worldMap{
+    width:100%;
+
+    height:620px;
+
+    border-radius:25px;
+
+    overflow:hidden;
+
+    border:1px solid #28506d;
+
+    box-shadow:
+        0 0 35px rgba(0,130,220,.18),
+        inset 0 0 40px rgba(0,0,0,.5);
+}
+
+.leaflet-container{
+    background:#020b14;
+
+    font-family:Arial,sans-serif;
+}
+
+.leaflet-control-zoom a{
+    background:#071827 !important;
+
+    color:white !important;
+
+    border-color:#29445f !important;
+}
+
+.map-panel{
+    position:absolute;
+
+    z-index:500;
+
+    top:15px;
+    left:15px;
+
+    width:285px;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    background:rgba(3,12,22,.88);
+
+    backdrop-filter:blur(12px);
+
+    border:1px solid #31556e;
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,.35);
+}
+
+.map-panel h3{
+    margin-bottom:8px;
+}
+
+.map-panel p{
+    color:#9db5c9;
+
+    font-size:13px;
+
+    line-height:1.5;
+}
+
+.map-time{
+    margin-top:12px;
+
+    font-size:22px;
+
+    color:#70d4ff;
+
+    font-weight:bold;
+}
+
+.map-status{
+    margin-top:6px;
+
+    font-size:14px;
+}
+
+.map-controls{
+    position:absolute;
+
+    z-index:500;
+
+    bottom:15px;
+    left:15px;
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:8px;
+}
+
+.map-controls button{
+    border:1px solid #31556e;
+
+    background:rgba(3,12,22,.9);
+
+    color:white;
+
+    padding:10px 14px;
+
+    border-radius:12px;
+}
+
+.map-controls button:hover{
+    background:#126da8;
+}
+
+.city-marker{
+    width:13px;
+    height:13px;
+
+    border-radius:50%;
+
+    border:2px solid white;
+
+    box-shadow:
+        0 0 12px currentColor;
+}
+
+.day-marker{
+    background:#ffd83d;
+    color:#ffd83d;
+}
+
+.night-marker{
+    background:#6ca5ff;
+    color:#6ca5ff;
+}
+
+.city-popup{
+    color:#111;
+}
+
+.city-popup strong{
+    font-size:16px;
+}
+
+.city-popup small{
+    display:block;
+    margin-top:4px;
+}
+
+
+/* =====================================================
+   ECLIPSE
+===================================================== */
+
+.eclipse{
+    background:
+        radial-gradient(
+            circle at center,
+            #152d45,
+            #050b13 65%
+        );
+}
+
+.eclipse-card{
+    max-width:900px;
+
+    margin:auto;
+
+    padding:30px;
+
+    border:1px solid #27445e;
+
+    border-radius:25px;
+
+    background:rgba(7,17,29,.9);
+
+    text-align:center;
+}
+
+.eclipse-display{
+    width:210px;
+    height:210px;
+
+    margin:25px auto;
+
+    position:relative;
+}
+
+.eclipse-sun{
+    position:absolute;
+
+    width:180px;
+    height:180px;
+
+    left:15px;
+    top:15px;
+
+    border-radius:50%;
+
+    background:#ffd83d;
+
+    box-shadow:
+        0 0 50px #ff9d00;
+}
+
+.eclipse-moon{
+    position:absolute;
+
+    width:150px;
+    height:150px;
+
+    left:75px;
+    top:30px;
+
+    border-radius:50%;
+
+    background:#03060a;
+
+    box-shadow:
+        0 0 15px #111;
+}
+
+.eclipse-card h3{
+    font-size:26px;
+}
+
+.eclipse-card p{
+    color:#a7bdcf;
+
+    line-height:1.6;
+
+    margin-top:10px;
+}
+
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+footer{
+    text-align:center;
+
+    padding:30px 15px;
+
+    color:#668098;
+
+    border-top:1px solid #142638;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media(max-width:700px){
+
+    .nav{
+        flex-direction:column;
+    }
+
+    nav a{
+        margin:0 6px;
+
+        font-size:12px;
+    }
+
+    .hero{
+        min-height:590px;
+
+        padding-top:45px;
+    }
+
+    .space{
+        height:300px;
+    }
+
+    .earth{
+        width:135px;
+        height:135px;
+    }
+
+    .moon-orbit{
+        width:300px;
+        height:170px;
+    }
+
+    .sun{
+        width:50px;
+        height:50px;
+    }
+
+    .search{
+        flex-direction:column;
+    }
+
+    .search button{
+        padding:12px;
+    }
+
+    #worldMap{
+        height:480px;
+
+        border-radius:18px;
+    }
+
+    .map-panel{
+        width:225px;
+
+        padding:12px;
+    }
+
+    .map-panel h3{
+        font-size:15px;
+    }
+
+    .map-time{
+        font-size:18px;
+    }
+
+    .map-controls{
+        right:10px;
+        left:10px;
+    }
+
+    .map-controls button{
+        font-size:12px;
+
+        padding:8px 10px;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
+
+<header>
+
+<div class="nav">
+
+    <div class="logo">
+        🌍 WorldTime
+    </div>
+
+    <nav>
+
+        <a href="#clocks">
+            World Clock
+        </a>
+
+        <a href="#world">
+            World Map
+        </a>
+
+        <a href="#eclipse">
+            Eclipse
+        </a>
+
+    </nav>
+
+</div>
+
+</header>
+
+
+<!-- =====================================================
+     HERO
+===================================================== -->
+
+<section class="hero">
+
+<div class="stars"></div>
+
+<div class="hero-content">
+
+    <h1>
+        🌍 WorldTime
+    </h1>
+
+    <p class="subtitle">
+        Explore worldwide time, day & night,
+        the Sun and the Moon
+    </p>
+
+</div>
+
+
+<div class="space">
+
+    <div
+        class="sun"
+        id="sun">
+    </div>
+
+
+    <div class="moon-orbit">
+
+        <div class="moon"></div>
+
+    </div>
+
+
+    <div class="earth"></div>
+
+
+    <div class="info">
+
+        <span id="currentDate">
+            Loading date...
+        </span>
+
+        <span id="utcTime">
+            UTC --:--:--
+        </span>
+
+        <span>
+            🌍 Earth
+        </span>
+
+    </div>
+
+</div>
+
+</section>
+
+
+<!-- =====================================================
+     WORLD CLOCK
+===================================================== -->
+
+<section
+    class="clock-section"
+    id="clocks">
+
+<div class="section-title">
+
+    <h2>
+        🕐 World Clock
+    </h2>
+
+    <p>
+        Check the current time in cities
+        around the world.
+    </p>
+
+</div>
+
+
+<div class="search">
+
+    <input
+        id="citySearch"
+        type="text"
+        placeholder="Search a city or country..."
+    >
+
+    <button onclick="searchCity()">
+        Search
+    </button>
+
+</div>
+
+
+<div
+    class="clock-grid"
+    id="clockGrid">
+</div>
+
+</section>
+
+
+<!-- =====================================================
+     WORLD MAP
+===================================================== -->
+
+<section
+    class="world-section"
+    id="world">
+
+<div class="section-title">
+
+    <h2>
+        🌎 Worldwide Day & Night
+    </h2>
+
+    <p>
+        Explore the entire Earth with live
+        city locations and day/night status.
+    </p>
+
+</div>
+
+
+<div class="map-wrapper">
+
+
+    <div id="worldMap"></div>
+
+
+    <div class="map-panel">
+
+        <h3>
+            🌍 Live Earth
+        </h3>
+
+        <p>
+            Explore cities around the world.
+            Yellow markers show daytime and
+            blue markers show nighttime.
+        </p>
+
+        <div
+            class="map-time"
+            id="mapUTC">
+            UTC --:--:--
+        </div>
+
+        <div
+            class="map-status"
+            id="mapStatus">
+            🌍 Loading...
+        </div>
+
+    </div>
+
+
+    <div class="map-controls">
+
+        <button onclick="map.setView([20,0],2)">
+            🌍 World
+        </button>
+
+        <button onclick="map.setView([51.5074,-0.1278],5)">
+            🇬🇧 London
+        </button>
+
+        <button onclick="map.setView([35.6762,139.6503],5)">
+            🇯🇵 Tokyo
+        </button>
+
+        <button onclick="map.setView([40.7128,-74.006],5)">
+            🇺🇸 New York
+        </button>
+
+        <button onclick="toggleNight()">
+            🌗 Day/Night
+        </button>
+
+    </div>
+
+</div>
+
+</section>
+
+
+<!-- =====================================================
+     ECLIPSE
+===================================================== -->
+
+<section
+    class="eclipse"
+    id="eclipse">
+
+<div class="section-title">
+
+    <h2>
+        🌑 Eclipse Explorer
+    </h2>
+
+    <p>
+        Explore how a solar eclipse happens when
+        the Moon passes between Earth and the Sun.
+    </p>
+
+</div>
+
+
+<div class="eclipse-card">
+
+    <h3>
+        ☀️ Solar Eclipse
+    </h3>
+
+
+    <div class="eclipse-display">
+
+        <div class="eclipse-sun"></div>
+
+        <div class="eclipse-moon"></div>
+
+    </div>
+
+
+    <p>
+        During a solar eclipse, the Moon blocks
+        some or all of the Sun's light for
+        locations along the eclipse path.
+    </p>
+
+
+    <p id="eclipseStatus">
+        🌍 Worldwide eclipse information
+    </p>
+
+</div>
+
+</section>
+
+
+<footer>
+
+🌍 WorldTime — Worldwide Day,
+Night & Space Explorer
+
+</footer>
+
+
+<!-- =====================================================
+     LEAFLET
+===================================================== -->
+
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script>
+
+/* =====================================================
+   CITY DATA
+===================================================== */
+
+const cities = [
+
+{
+    city:"London",
+    country:"United Kingdom",
+    zone:"Europe/London",
+    lat:51.5074,
+    lon:-0.1278
+},
+
+{
+    city:"New York",
+    country:"United States",
+    zone:"America/New_York",
+    lat:40.7128,
+    lon:-74.0060
+},
+
+{
+    city:"Los Angeles",
+    country:"United States",
+    zone:"America/Los_Angeles",
+    lat:34.0522,
+    lon:-118.2437
+},
+
+{
+    city:"Toronto",
+    country:"Canada",
+    zone:"America/Toronto",
+    lat:43.6532,
+    lon:-79.3832
+},
+
+{
+    city:"Mexico City",
+    country:"Mexico",
+    zone:"America/Mexico_City",
+    lat:19.4326,
+    lon:-99.1332
+},
+
+{
+    city:"São Paulo",
+    country:"Brazil",
+    zone:"America/Sao_Paulo",
+    lat:-23.5505,
+    lon:-46.6333
+},
+
+{
+    city:"Buenos Aires",
+    country:"Argentina",
+    zone:"America/Argentina/Buenos_Aires",
+    lat:-34.6037,
+    lon:-58.3816
+},
+
+{
+    city:"Reykjavik",
+    country:"Iceland",
+    zone:"Atlantic/Reykjavik",
+    lat:64.1466,
+    lon:-21.9426
+},
+
+{
+    city:"Paris",
+    country:"France",
+    zone:"Europe/Paris",
+    lat:48.8566,
+    lon:2.3522
+},
+
+{
+    city:"Berlin",
+    country:"Germany",
+    zone:"Europe/Berlin",
+    lat:52.5200,
+    lon:13.4050
+},
+
+{
+    city:"Rome",
+    country:"Italy",
+    zone:"Europe/Rome",
+    lat:41.9028,
+    lon:12.4964
+},
+
+{
+    city:"Moscow",
+    country:"Russia",
+    zone:"Europe/Moscow",
+    lat:55.7558,
+    lon:37.6173
+},
+
+{
+    city:"Cairo",
+    country:"Egypt",
+    zone:"Africa/Cairo",
+    lat:30.0444,
+    lon:31.2357
+},
+
+{
+    city:"Nairobi",
+    country:"Kenya",
+    zone:"Africa/Nairobi",
+    lat:-1.2921,
+    lon:36.8219
+},
+
+{
+    city:"Cape Town",
+    country:"South Africa",
+    zone:"Africa/Johannesburg",
+    lat:-33.9249,
+    lon:18.4241
+},
+
+{
+    city:"Dubai",
+    country:"United Arab Emirates",
+    zone:"Asia/Dubai",
+    lat:25.2048,
+    lon:55.2708
+},
+
+{
+    city:"Delhi",
+    country:"India",
+    zone:"Asia/Kolkata",
+    lat:28.6139,
+    lon:77.2090
+},
+
+{
+    city:"Bangkok",
+    country:"Thailand",
+    zone:"Asia/Bangkok",
+    lat:13.7563,
+    lon:100.5018
+},
+
+{
+    city:"Singapore",
+    country:"Singapore",
+    zone:"Asia/Singapore",
+    lat:1.3521,
+    lon:103.8198
+},
+
+{
+    city:"Beijing",
+    country:"China",
+    zone:"Asia/Shanghai",
+    lat:39.9042,
+    lon:116.4074
+},
+
+{
+    city:"Tokyo",
+    country:"Japan",
+    zone:"Asia/Tokyo",
+    lat:35.6762,
+    lon:139.6503
+},
+
+{
+    city:"Seoul",
+    country:"South Korea",
+    zone:"Asia/Seoul",
+    lat:37.5665,
+    lon:126.9780
+},
+
+{
+    city:"Jakarta",
+    country:"Indonesia",
+    zone:"Asia/Jakarta",
+    lat:-6.2088,
+    lon:106.8456
+},
+
+{
+    city:"Manila",
+    country:"Philippines",
+    zone:"Asia/Manila",
+    lat:14.5995,
+    lon:120.9842
+},
+
+{
+    city:"Sydney",
+    country:"Australia",
+    zone:"Australia/Sydney",
+    lat:-33.8688,
+    lon:151.2093
+},
+
+{
+    city:"Auckland",
+    country:"New Zealand",
+    zone:"Pacific/Auckland",
+    lat:-36.8509,
+    lon:174.7645
+},
+
+{
+    city:"Honolulu",
+    country:"United States",
+    zone:"Pacific/Honolulu",
+    lat:21.3069,
+    lon:-157.8583
+},
+
+{
+    city:"Anchorage",
+    country:"United States",
+    zone:"America/Anchorage",
+    lat:61.2181,
+    lon:-149.9003
+},
+
+{
+    city:"Vancouver",
+    country:"Canada",
+    zone:"America/Vancouver",
+    lat:49.2827,
+    lon:-123.1207
+},
+
+{
+    city:"Lima",
+    country:"Peru",
+    zone:"America/Lima",
+    lat:-12.0464,
+    lon:-77.0428
+},
+
+{
+    city:"Istanbul",
+    country:"Türkiye",
+    zone:"Europe/Istanbul",
+    lat:41.0082,
+    lon:28.9784
+}
+
+];
+
+
+/* =====================================================
+   CLOCKS
+===================================================== */
+
+function createClocks(list=cities){
+
+    const grid=
+        document.getElementById("clockGrid");
+
+    grid.innerHTML="";
+
+    list.forEach((item,index)=>{
+
+        const card=
+            document.createElement("div");
+
+        card.className="clock-card";
+
+        card.innerHTML=`
+
+            <div class="city">
+                ${item.city}
+            </div>
+
+            <div class="country">
+                ${item.country}
+            </div>
+
+            <div
+                class="time"
+                id="time-${index}">
+                --:--:--
+            </div>
+
+            <div
+                class="daynight"
+                id="status-${index}">
+                Loading...
+            </div>
+
+        `;
+
+        grid.appendChild(card);
+
+        item.displayIndex=index;
+
+    });
+
+    updateClocks(list);
+
+}
+
+
+/* =====================================================
+   UPDATE CLOCKS
+===================================================== */
+
+function updateClocks(list=cities){
+
+    const now=new Date();
+
+    list.forEach((item,index)=>{
+
+        const timeElement=
+            document.getElementById(
+                `time-${index}`
+            );
+
+        const statusElement=
+            document.getElementById(
+                `status-${index}`
+            );
+
+        if(!timeElement) return;
+
+        const parts=
+            new Intl.DateTimeFormat(
+                "en-GB",
+                {
+                    timeZone:item.zone,
+                    hour:"2-digit",
+                    minute:"2-digit",
+                    second:"2-digit",
+                    hour12:false
+                }
+            ).formatToParts(now);
+
+        const hourPart=
+            parts.find(
+                p=>p.type==="hour"
+            );
+
+        const hour=
+            Number(hourPart.value);
+
+        timeElement.textContent=
+            new Intl.DateTimeFormat(
+                "en-GB",
+                {
+                    timeZone:item.zone,
+                    hour:"2-digit",
+                    minute:"2-digit",
+                    second:"2-digit",
+                    hour12:false
+                }
+            ).format(now);
+
+        statusElement.textContent=
+            hour>=6 && hour<18
+            ? "☀️ Daytime"
+            : "🌙 Night";
+
+    });
+
+}
+
+
+/* =====================================================
+   SEARCH
+===================================================== */
+
+let currentClockList=cities;
+
+function searchCity(){
+
+    const input=
+        document
+        .getElementById("citySearch")
+        .value
+        .trim()
+        .toLowerCase();
+
+    if(!input){
+
+        currentClockList=cities;
+
+        createClocks(cities);
+
+        return;
+
+    }
+
+    const results=
+        cities.filter(item=>
+
+            item.city
+                .toLowerCase()
+                .includes(input)
+
+            ||
+
+            item.country
+                .toLowerCase()
+                .includes(input)
+
+        );
+
+    currentClockList=results;
+
+    createClocks(results);
+
+}
+
+
+/* =====================================================
+   ENTER SEARCH
+===================================================== */
+
+document
+.getElementById("citySearch")
+.addEventListener(
+    "keydown",
+    function(event){
+
+        if(event.key==="Enter"){
+
+            searchCity();
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   HEADER TIME
+===================================================== */
+
+function updateHeader(){
+
+    const now=new Date();
+
+    document
+    .getElementById("utcTime")
+    .textContent=
+        "UTC "+
+        now.toLocaleTimeString(
+            "en-GB",
+            {
+                hour12:false
+            }
+        );
+
+    document
+    .getElementById("currentDate")
+    .textContent=
+        now.toLocaleDateString(
+            "en-GB",
+            {
+                weekday:"long",
+                day:"numeric",
+                month:"long",
+                year:"numeric"
+            }
+        );
+
+}
+
+
+/* =====================================================
+   MOVING SUN
+===================================================== */
+
+function updateSun(){
+
+    const now=new Date();
+
+    const seconds=
+        now.getUTCHours()*3600+
+        now.getUTCMinutes()*60+
+        now.getUTCSeconds();
+
+    const percentage=
+        seconds/86400;
+
+    const angle=
+        percentage*Math.PI*2;
+
+    const radiusX=
+        Math.min(
+            420,
+            window.innerWidth*.38
+        );
+
+    const radiusY=135;
+
+    const x=
+        Math.sin(angle)*radiusX;
+
+    const y=
+        -Math.cos(angle)*radiusY;
+
+    const sun=
+        document.getElementById("sun");
+
+    sun.style.left=
+        `calc(50% + ${x}px)`;
+
+    sun.style.top=
+        `calc(55% + ${y}px)`;
+
+}
+
+
+/* =====================================================
+   LEAFLET MAP
+===================================================== */
+
+const map=
+    L.map(
+        "worldMap",
+        {
+            worldCopyJump:true,
+            minZoom:2,
+            maxZoom:7
+        }
+    ).setView(
+        [20,0],
+        2
+    );
+
+
+/* =====================================================
+   MAP TILES
+===================================================== */
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom:19,
+        attribution:
+            "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+/* =====================================================
+   CITY MARKERS
+===================================================== */
+
+const cityMarkers=[];
+
+
+function getHour(zone){
+
+    const parts=
+        new Intl.DateTimeFormat(
+            "en-GB",
+            {
+                timeZone:zone,
+                hour:"2-digit",
+                hour12:false
+            }
+        ).formatToParts(
+            new Date()
+        );
+
+    const hourPart=
+        parts.find(
+            p=>p.type==="hour"
+        );
+
+    return Number(
+        hourPart.value
+    );
+
+}
+
+
+function cityIcon(isDay){
+
+    return L.divIcon({
+
+        className:"",
+
+        html:
+            `<div class="city-marker ${
+                isDay
+                ? "day-marker"
+                : "night-marker"
+            }"></div>`,
+
+        iconSize:[13,13],
+
+        iconAnchor:[6,6]
+
+    });
+
+}
+
+
+worldCitiesForMap();
+
+
+function worldCitiesForMap(){
+
+    cities.forEach(city=>{
+
+        const hour=
+            getHour(city.zone);
+
+        const isDay=
+            hour>=6 &&
+            hour<18;
+
+        const marker=
+            L.marker(
+                [city.lat,city.lon],
+                {
+                    icon:
+                        cityIcon(isDay)
+                }
+            ).addTo(map);
+
+        marker.bindPopup(`
+            <div class="city-popup">
+
+                <strong>
+                    ${city.city}
+                </strong>
+
+                <small>
+                    ${city.country}
+                </small>
+
+                <small>
+                    ${getCityTime(city)}
+                </small>
+
+            </div>
+        `);
+
+        cityMarkers.push({
+            marker:marker,
+            city:city
+        });
+
+    });
+
+}
+
+
+/* =====================================================
+   CITY TIME
+===================================================== */
+
+function getCityTime(city){
+
+    const now=new Date();
+
+    const time=
+        new Intl.DateTimeFormat(
+            "en-GB",
+            {
+                timeZone:city.zone,
+                hour:"2-digit",
+                minute:"2-digit",
+                second:"2-digit",
+                hour12:false
+            }
+        ).format(now);
+
+    const hour=
+        getHour(city.zone);
+
+    return (
+        time+
+        " — "+
+        (
+            hour>=6 &&
+            hour<18
+            ? "☀️ Daytime"
+            : "🌙 Nighttime"
+        )
+    );
+
+}
+
+
+/* =====================================================
+   UPDATE MARKERS
+===================================================== */
+
+function updateMapCities(){
+
+    cityMarkers.forEach(data=>{
+
+        const hour=
+            getHour(
+                data.city.zone
+            );
+
+        const isDay=
+            hour>=6 &&
+            hour<18;
+
+        data.marker.setIcon(
+            cityIcon(isDay)
+        );
+
+    });
+
+}
+
+
+/* =====================================================
+   MAP UTC
+===================================================== */
+
+function updateMapTime(){
+
+    const utc=
+        new Date().toLocaleTimeString(
+            "en-GB",
+            {
+                timeZone:"UTC",
+                hour12:false
+            }
+        );
+
+    document
+    .getElementById("mapUTC")
+    .textContent=
+        "UTC "+utc;
+
+}
+
+
+/* =====================================================
+   MAP STATUS
+===================================================== */
+
+function updateMapStatus(){
+
+    const hour=
+        new Date().getUTCHours();
+
+    let text;
+
+    if(hour>=6 && hour<18){
+
+        text=
+            "☀️ Daylight is moving across Earth";
+
+    }else{
+
+        text=
+            "🌙 Night is moving across Earth";
+
+    }
+
+    document
+    .getElementById("mapStatus")
+    .textContent=text;
+
+}
+
+
+/* =====================================================
+   NIGHT OVERLAY
+===================================================== */
+
+let nightOverlay=null;
+
+let nightVisible=false;
+
+
+function createNightOverlay(){
+
+    if(nightOverlay){
+
+        map.removeLayer(
+            nightOverlay
+        );
+
+    }
+
+    const now=new Date();
+
+    const utcHours=
+        now.getUTCHours()+
+        now.getUTCMinutes()/60+
+        now.getUTCSeconds()/3600;
+
+    let sunLongitude=
+        180-
+        (utcHours/24)*360;
+
+    while(
+        sunLongitude>180
+    ){
+        sunLongitude-=360;
+    }
+
+    while(
+        sunLongitude<-180
+    ){
+        sunLongitude+=360;
+    }
+
+
+    /*
+       Night hemisphere is approximately
+       opposite the Sun.
+    */
+
+    const nightCenter=
+        sunLongitude+180;
+
+    const points=[
+        [-85,nightCenter-90],
+        [-85,nightCenter+90],
+        [85,nightCenter+90],
+        [85,nightCenter-90]
+    ];
+
+
+    nightOverlay=
+        L.polygon(
+            points,
+            {
+                stroke:false,
+                fillColor:"#020611",
+                fillOpacity:.43,
+                interactive:false
+            }
+        ).addTo(map);
+
+}
+
+
+function toggleNight(){
+
+    nightVisible=
+        !nightVisible;
+
+    if(nightVisible){
+
+        createNightOverlay();
+
+    }else{
+
+        if(nightOverlay){
+
+            map.removeLayer(
+                nightOverlay
+            );
+
+            nightOverlay=null;
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+createClocks();
+
+updateHeader();
+
+updateSun();
+
+updateMapTime();
+
+updateMapStatus();
+
+updateMapCities();
+
+
+/* =====================================================
+   LIVE UPDATE
+===================================================== */
+
+setInterval(()=>{
+
+    updateClocks(
+        currentClockList
+    );
+
+    updateHeader();
+
+    updateSun();
+
+    updateMapTime();
+
+    updateMapStatus();
+
+    updateMapCities();
+
+    if(nightVisible){
+
+        createNightOverlay();
+
+    }
+
+},1000);
+
+
+/* =====================================================
+   MAP RESIZE
+===================================================== */
+
+setTimeout(()=>{
+
+    map.invalidateSize();
+
+},500);
+
+
+window.addEventListener(
+    "resize",
+    ()=>{
+        map.invalidateSize();
+    }
+);
+
+
+/* =====================================================
+   ECLIPSE
+===================================================== */
+
+document
+.getElementById("eclipseStatus")
+.textContent=
+"🌍 Eclipse Explorer ready — Sun and Moon alignment display active.";
+
+
+/* =====================================================
+   TOUCH SUPPORT
+===================================================== */
+
+document.addEventListener(
+    "touchstart",
+    function(){},
+    {
+        passive:true
+    }
+);
+
+</script>
+
+</body>
+</html>
+The important
