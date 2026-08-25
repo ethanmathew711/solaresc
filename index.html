@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>WorldTime 🌍 | World Clock & Day/Night Explorer</title>
+<title>WorldTime 🌍 | Live Earth, Sun, Moon & Eclipse Explorer</title>
 
 <!-- Leaflet Map -->
 <link
@@ -946,6 +946,251 @@ footer{
 
 }
 
+
+/* =====================================================
+   ENHANCED UI
+===================================================== */
+
+.search{
+    position:relative;
+}
+
+.search-suggestions{
+    position:absolute;
+    left:0;
+    right:110px;
+    top:58px;
+    z-index:900;
+    display:none;
+    overflow:hidden;
+    border:1px solid #31556e;
+    border-radius:14px;
+    background:rgba(3,12,22,.97);
+    backdrop-filter:blur(16px);
+    box-shadow:0 18px 40px rgba(0,0,0,.4);
+    text-align:left;
+}
+
+.suggestion{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    width:100%;
+    padding:12px 14px;
+    border:0;
+    border-bottom:1px solid rgba(49,85,110,.35);
+    background:transparent;
+    color:white;
+    text-align:left;
+}
+
+.suggestion:last-child{border-bottom:0}
+.suggestion:hover{background:rgba(22,136,212,.2)}
+.suggestion small{color:#7895ac}
+
+.selected-location{
+    margin-top:14px;
+    padding:12px;
+    border:1px solid rgba(75,151,203,.35);
+    border-radius:14px;
+    background:rgba(8,26,43,.72);
+}
+
+.selected-title{
+    color:#86d7ff;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+}
+
+.selected-name{
+    margin-top:5px;
+    font-size:17px;
+    font-weight:700;
+}
+
+.selected-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:10px;
+}
+
+.selected-grid div{
+    padding:8px;
+    border-radius:10px;
+    background:rgba(255,255,255,.035);
+}
+
+.selected-grid span,
+.selected-grid strong{
+    display:block;
+}
+
+.selected-grid span{
+    color:#7895ac;
+    font-size:10px;
+}
+
+.selected-grid strong{
+    margin-top:3px;
+    color:#d9f2ff;
+    font-size:12px;
+}
+
+.eclipse-countdown{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    max-width:650px;
+    margin:25px auto 0;
+}
+
+.count-box{
+    padding:14px 8px;
+    border:1px solid #27445e;
+    border-radius:15px;
+    background:rgba(255,255,255,.035);
+}
+
+.count-number{
+    display:block;
+    font-size:30px;
+    font-weight:800;
+    color:#7bd0ff;
+}
+
+.count-label{
+    color:#7895ac;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+}
+
+.eclipse-times{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-top:22px;
+}
+
+.eclipse-time-box{
+    padding:14px;
+    border-radius:14px;
+    border:1px solid #27445e;
+    background:rgba(255,255,255,.025);
+}
+
+.eclipse-time-box strong,
+.eclipse-time-box span{
+    display:block;
+}
+
+.eclipse-time-box strong{font-size:13px}
+.eclipse-time-box span{
+    margin-top:6px;
+    color:#9db5c9;
+    font-size:12px;
+}
+
+.eclipse-note{
+    font-size:11px !important;
+}
+
+.eclipse-timeline{
+    max-width:900px;
+    margin:22px auto 0;
+    padding:22px;
+    border:1px solid #27445e;
+    border-radius:22px;
+    background:rgba(7,17,29,.72);
+}
+
+.timeline-heading{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:end;
+    margin-bottom:14px;
+}
+
+.timeline-heading span{
+    font-size:20px;
+    font-weight:800;
+}
+
+.timeline-heading small{color:#7895ac}
+
+.timeline-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+}
+
+.timeline-event{
+    padding:16px;
+    border:1px solid #27445e;
+    border-radius:15px;
+    background:#081827;
+    color:white;
+    text-align:left;
+    transition:.2s;
+}
+
+.timeline-event:hover{
+    transform:translateY(-3px);
+    border-color:#51b9f2;
+    background:#0b2134;
+}
+
+.timeline-event span,
+.timeline-event strong,
+.timeline-event small{
+    display:block;
+}
+
+.event-date{
+    color:#7bd0ff;
+    font-size:11px;
+    letter-spacing:.12em;
+}
+
+.timeline-event strong{
+    margin-top:7px;
+    font-size:14px;
+}
+
+.timeline-event small{
+    margin-top:5px;
+    color:#7895ac;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip{
+    background:#eef7ff;
+}
+
+@media(max-width:700px){
+    .search-suggestions{
+        right:0;
+        top:110px;
+    }
+
+    .eclipse-countdown{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .eclipse-times,
+    .timeline-grid{
+        grid-template-columns:1fr;
+    }
+
+    .timeline-heading{
+        align-items:flex-start;
+        flex-direction:column;
+    }
+}
+
 </style>
 </head>
 
@@ -1079,6 +1324,7 @@ footer{
     <button onclick="searchCity()">
         Search
     </button>
+    <div class="search-suggestions" id="searchSuggestions"></div>
 
 </div>
 
@@ -1145,6 +1391,18 @@ footer{
 
         <div class="map-location" id="mapLocation">
             Click the map to inspect a location.
+        </div>
+
+
+        <div class="selected-location" id="selectedLocation">
+            <div class="selected-title">📍 Location details</div>
+            <div class="selected-name" id="selectedName">Click anywhere on Earth</div>
+            <div class="selected-grid">
+                <div><span>Coordinates</span><strong id="selectedCoords">—</strong></div>
+                <div><span>Local time</span><strong id="selectedTime">—</strong></div>
+                <div><span>Sun</span><strong id="selectedSun">—</strong></div>
+                <div><span>Solar altitude</span><strong id="selectedAltitude">—</strong></div>
+            </div>
         </div>
 
         <div class="map-legend">
@@ -1752,6 +2010,16 @@ document
 
     }
 );
+
+document.getElementById("citySearch").addEventListener("input", function(){
+    showSuggestions(this.value);
+});
+
+document.addEventListener("click", function(event){
+    if(!event.target.closest(".search")){
+        hideSuggestions();
+    }
+});
 
 
 /* =====================================================
@@ -2365,14 +2633,91 @@ function toggleEclipsePath(){
 }
 
 /* Show coordinates when the user taps/clicks the map. */
-map.on("click",function(event){
+function solarAltitude(lat, lon, date = new Date()){
+    const day = Math.floor(
+        (Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) -
+         Date.UTC(date.getUTCFullYear(),0,0)) / 86400000
+    );
 
-    const lat = event.latlng.lat.toFixed(3);
-    const lon = event.latlng.lng.toFixed(3);
+    const decl =
+        23.44 * Math.sin((2*Math.PI/365) * (day - 81));
+
+    const utcHours =
+        date.getUTCHours() +
+        date.getUTCMinutes()/60 +
+        date.getUTCSeconds()/3600;
+
+    const sunLon = 180 - (utcHours/24)*360;
+    let hourAngle = sunLon - lon;
+
+    while(hourAngle > 180) hourAngle -= 360;
+    while(hourAngle < -180) hourAngle += 360;
+
+    const rad = Math.PI/180;
+    const altitude = Math.asin(
+        Math.sin(lat*rad)*Math.sin(decl*rad) +
+        Math.cos(lat*rad)*Math.cos(decl*rad)*Math.cos(hourAngle*rad)
+    ) / rad;
+
+    return altitude;
+}
+
+function findNearestCity(lat, lon){
+    let best = null;
+    let bestDistance = Infinity;
+
+    cities.forEach(city => {
+        const dLat = city.lat-lat;
+        const dLon = city.lon-lon;
+        const distance = dLat*dLat + dLon*dLon;
+
+        if(distance < bestDistance){
+            bestDistance = distance;
+            best = city;
+        }
+    });
+
+    return best;
+}
+
+function showLocationDetails(lat, lon, name = null, zone = null){
+    selectedMapLocation = {lat, lon, name, zone};
+    const nearest = findNearestCity(lat, lon);
+    const locationName = name || `Selected location`;
 
     document.getElementById("mapLocation").textContent =
-        `📍 Location: ${lat}°, ${lon}°`;
+        `📍 ${locationName}`;
 
+    document.getElementById("selectedName").textContent =
+        nearest && !name
+            ? `Near ${nearest.city}, ${nearest.country}`
+            : locationName;
+
+    document.getElementById("selectedCoords").textContent =
+        `${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
+
+    const timeZone = zone || (nearest ? nearest.zone : "UTC");
+
+    document.getElementById("selectedTime").textContent =
+        new Intl.DateTimeFormat("en-GB", {
+            timeZone,
+            hour:"2-digit",
+            minute:"2-digit",
+            second:"2-digit",
+            hour12:false
+        }).format(new Date());
+
+    const altitude = solarAltitude(lat, lon);
+
+    document.getElementById("selectedAltitude").textContent =
+        `${altitude.toFixed(1)}°`;
+
+    document.getElementById("selectedSun").textContent =
+        altitude > 0 ? "☀️ Above horizon" : "🌙 Below horizon";
+}
+
+map.on("click",function(event){
+    showLocationDetails(event.latlng.lat, event.latlng.lng);
 });
 
 
@@ -2381,6 +2726,7 @@ map.on("click",function(event){
 ===================================================== */
 
 let nightOverlay=null;
+let selectedMapLocation = null;
 
 let nightVisible=false;
 
@@ -2521,6 +2867,11 @@ setInterval(()=>{
 
     }
 
+    if(selectedMapLocation){
+        const p = selectedMapLocation;
+        showLocationDetails(p.lat, p.lon, p.name, p.zone);
+    }
+
 },1000);
 
 
@@ -2546,6 +2897,27 @@ window.addEventListener(
 /* =====================================================
    ECLIPSE
 ===================================================== */
+
+
+function focusEclipse(year, monthIndex){
+    if(year === 2027 && monthIndex === 7){
+        if(!eclipseVisible) toggleEclipsePath();
+        else map.fitBounds(L.latLngBounds(eclipse2027CenterLine), {
+            padding:[35,35],
+            maxZoom:4,
+            animate:true
+        });
+        document.getElementById("eclipse").scrollIntoView({
+            behavior:"smooth",
+            block:"start"
+        });
+    }else{
+        document.getElementById("eclipse").scrollIntoView({
+            behavior:"smooth",
+            block:"start"
+        });
+    }
+}
 
 /* =====================================================
    SOLAR ECLIPSE COUNTDOWN
