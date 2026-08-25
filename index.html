@@ -632,6 +632,71 @@ section{
     font-size:14px;
 }
 
+.map-legend{
+    margin-top:12px;
+    display:grid;
+    gap:7px;
+    font-size:12px;
+    color:#b7cada;
+}
+
+.map-legend-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.legend-dot{
+    width:11px;
+    height:11px;
+    border-radius:50%;
+    display:inline-block;
+    box-shadow:0 0 10px currentColor;
+}
+
+.legend-total{
+    background:#ff3d81;
+    color:#ff3d81;
+}
+
+.legend-eclipse{
+    background:#ffd83d;
+    color:#ffd83d;
+}
+
+.legend-sun{
+    background:#fff6a0;
+    color:#fff6a0;
+}
+
+.sun-map-marker{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:radial-gradient(circle,#fff,#ffe45b 40%,#ff8a00 75%,#ff4d00);
+    border:2px solid #fff8b0;
+    box-shadow:0 0 14px #ffd000,0 0 32px #ff7300;
+}
+
+.eclipse-center-marker{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#ff3d81;
+    border:2px solid white;
+    box-shadow:0 0 16px #ff3d81;
+}
+
+.eclipse-tooltip{
+    color:#111;
+}
+
+.map-location{
+    margin-top:8px;
+    color:#8ecfff;
+    font-size:12px;
+}
+
 .map-controls{
     position:absolute;
 
@@ -1078,6 +1143,25 @@ footer{
             🌍 Loading...
         </div>
 
+        <div class="map-location" id="mapLocation">
+            Click the map to inspect a location.
+        </div>
+
+        <div class="map-legend">
+            <div class="map-legend-row">
+                <span class="legend-dot legend-sun"></span>
+                <span>Live Sun position</span>
+            </div>
+            <div class="map-legend-row">
+                <span class="legend-dot legend-total"></span>
+                <span>2027 total-eclipse centre line</span>
+            </div>
+            <div class="map-legend-row">
+                <span class="legend-dot legend-eclipse"></span>
+                <span>City day/night markers</span>
+            </div>
+        </div>
+
     </div>
 
 
@@ -1101,6 +1185,14 @@ footer{
 
         <button onclick="toggleNight()">
             🌗 Day/Night
+        </button>
+
+        <button onclick="toggleEclipsePath()">
+            🌑 2027 Eclipse
+        </button>
+
+        <button onclick="centerSun()">
+            ☀️ Sun
         </button>
 
     </div>
@@ -1156,7 +1248,45 @@ footer{
 
 
     <p id="eclipseStatus">
-        🌍 Worldwide eclipse information
+        🌍 Loading next solar eclipse...
+    </p>
+
+    <div class="eclipse-countdown" aria-label="Solar eclipse countdown">
+        <div class="count-box">
+            <span class="count-number" id="eclipseDays">--</span>
+            <span class="count-label">Days</span>
+        </div>
+        <div class="count-box">
+            <span class="count-number" id="eclipseHours">--</span>
+            <span class="count-label">Hours</span>
+        </div>
+        <div class="count-box">
+            <span class="count-number" id="eclipseMinutes">--</span>
+            <span class="count-label">Minutes</span>
+        </div>
+        <div class="count-box">
+            <span class="count-number" id="eclipseSeconds">--</span>
+            <span class="count-label">Seconds</span>
+        </div>
+    </div>
+
+    <div class="eclipse-times">
+        <div class="eclipse-time-box">
+            <strong>🌑 Next solar eclipse</strong>
+            <span>6 Feb 2027 · 12:57:36 UTC</span>
+        </div>
+        <div class="eclipse-time-box">
+            <strong>☀️ Next total solar eclipse</strong>
+            <span>2 Aug 2027 · 07:30:11 UTC</span>
+        </div>
+        <div class="eclipse-time-box">
+            <strong>🇬🇧 UK partial eclipse</strong>
+            <span>2 Aug 2027 · 08:57 BST*</span>
+        </div>
+    </div>
+
+    <p class="eclipse-note">
+        *UK time shown for the start of the 2 Aug 2027 partial eclipse. Never look directly at the Sun; use proper solar viewing protection.
     </p>
 
 </div>
@@ -1959,6 +2089,294 @@ function updateMapStatus(){
 
 
 /* =====================================================
+   ENHANCED SPACE MAP
+===================================================== */
+
+/*
+   2 August 2027 total solar eclipse.
+   The sampled centre-line coordinates below are taken from
+   NASA/Fred Espenak's published eclipse path table.
+*/
+const eclipse2027CenterLine = [
+    [27.96,-44.48],
+    [30.49,-36.23],
+    [32.12,-30.09],
+    [33.08,-25.91],
+    [35.23,-18.40],
+    [35.23,-6.35],
+    [34.91,8.73],
+    [34.32,12.03],
+    [33.85,14.09],
+    [33.22,12.03],
+    [28.47,28.27],
+    [27.29,30.34],
+    [25.50,33.20],
+    [23.53,36.74],
+    [22.51,37.35],
+    [21.16,37.96],
+    [1.98,61.80],
+    [0.21,64.29],
+    [-0.73,65.70],
+    [-1.72,67.22],
+    [-2.77,68.93],
+    [-3.91,70.86]
+];
+
+let eclipsePathLayer = null;
+let eclipseBoundaryLayer = null;
+let eclipseMarkers = [];
+let eclipseVisible = false;
+let sunMapMarker = null;
+
+/* Create a glowing Sun marker at the approximate sub-solar point. */
+function getSunMapPosition(){
+
+    const now = new Date();
+
+    const utcHours =
+        now.getUTCHours() +
+        now.getUTCMinutes()/60 +
+        now.getUTCSeconds()/3600;
+
+    /* Approximate solar longitude from UTC. */
+    let lon = 180 - (utcHours / 24) * 360;
+
+    while(lon > 180) lon -= 360;
+    while(lon < -180) lon += 360;
+
+    /* Seasonal solar declination approximation. */
+    const day =
+        Math.floor(
+            (Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate()
+            ) - Date.UTC(now.getUTCFullYear(),0,0)) /
+            86400000
+        );
+
+    const declination =
+        23.44 *
+        Math.sin(
+            (2*Math.PI/365) *
+            (day - 81)
+        );
+
+    return [declination, lon];
+}
+
+function createSunMapMarker(){
+
+    const position = getSunMapPosition();
+
+    if(!sunMapMarker){
+
+        sunMapMarker =
+            L.marker(
+                position,
+                {
+                    icon:L.divIcon({
+                        className:"",
+                        html:`<div class="sun-map-marker"></div>`,
+                        iconSize:[22,22],
+                        iconAnchor:[11,11]
+                    }),
+                    zIndexOffset:1000
+                }
+            ).addTo(map);
+
+        sunMapMarker.bindTooltip(
+            "☀️ Approximate live sub-solar point",
+            {direction:"top"}
+        );
+
+    }else{
+
+        sunMapMarker.setLatLng(position);
+
+    }
+
+}
+
+function updateSunMapMarker(){
+
+    createSunMapMarker();
+
+}
+
+function centerSun(){
+
+    const position = getSunMapPosition();
+
+    map.setView(
+        position,
+        3,
+        {animate:true}
+    );
+
+}
+
+function addEclipsePath(){
+
+    if(eclipsePathLayer){
+        map.removeLayer(eclipsePathLayer);
+    }
+
+    if(eclipseBoundaryLayer){
+        map.removeLayer(eclipseBoundaryLayer);
+    }
+
+    eclipsePathLayer =
+        L.polyline(
+            eclipse2027CenterLine,
+            {
+                color:"#ff3d81",
+                weight:5,
+                opacity:.95,
+                lineCap:"round",
+                lineJoin:"round"
+            }
+        ).addTo(map);
+
+    eclipsePathLayer.bindTooltip(
+        "🌑 2 August 2027 — Total Eclipse Centre Line",
+        {sticky:true}
+    );
+
+    /*
+       A visual corridor around the centre line.
+       This is deliberately labelled as a visual corridor rather
+       than an exact legal/viewing boundary.
+    */
+    eclipseBoundaryLayer =
+        L.polyline(
+            eclipse2027CenterLine,
+            {
+                color:"#ffd83d",
+                weight:30,
+                opacity:.18,
+                lineCap:"round",
+                lineJoin:"round"
+            }
+        ).addTo(map);
+
+    const greatest =
+        L.marker(
+            [25.505,33.183],
+            {
+                icon:L.divIcon({
+                    className:"",
+                    html:`<div class="eclipse-center-marker"></div>`,
+                    iconSize:[16,16],
+                    iconAnchor:[8,8]
+                }),
+                zIndexOffset:900
+            }
+        ).addTo(map);
+
+    greatest.bindPopup(`
+        <div class="eclipse-tooltip">
+            <strong>🌑 Greatest Eclipse</strong><br>
+            2 August 2027<br>
+            10:06:38 UTC<br>
+            25.5°N, 33.2°E<br>
+            Totality ≈ 6m 23s<br>
+            Path width ≈ 258 km
+        </div>
+    `);
+
+    const duration =
+        L.marker(
+            [26.817,31.133],
+            {
+                icon:L.divIcon({
+                    className:"",
+                    html:`<div class="eclipse-center-marker"></div>`,
+                    iconSize:[16,16],
+                    iconAnchor:[8,8]
+                }),
+                zIndexOffset:900
+            }
+        ).addTo(map);
+
+    duration.bindPopup(`
+        <div class="eclipse-tooltip">
+            <strong>⏱️ Greatest Duration</strong><br>
+            2 August 2027<br>
+            10:00:21 UTC<br>
+            26.8°N, 31.1°E<br>
+            Maximum totality ≈ 6m 23s
+        </div>
+    `);
+
+    eclipseMarkers.push(greatest,duration);
+
+}
+
+function removeEclipsePath(){
+
+    if(eclipsePathLayer){
+        map.removeLayer(eclipsePathLayer);
+        eclipsePathLayer = null;
+    }
+
+    if(eclipseBoundaryLayer){
+        map.removeLayer(eclipseBoundaryLayer);
+        eclipseBoundaryLayer = null;
+    }
+
+    eclipseMarkers.forEach(marker=>{
+        map.removeLayer(marker);
+    });
+
+    eclipseMarkers = [];
+
+}
+
+function toggleEclipsePath(){
+
+    eclipseVisible = !eclipseVisible;
+
+    if(eclipseVisible){
+
+        addEclipsePath();
+
+        map.fitBounds(
+            L.latLngBounds(eclipse2027CenterLine),
+            {
+                padding:[35,35],
+                maxZoom:4,
+                animate:true
+            }
+        );
+
+        document.getElementById("mapStatus").textContent =
+            "🌑 2027 total-eclipse centre line displayed";
+
+    }else{
+
+        removeEclipsePath();
+
+        document.getElementById("mapStatus").textContent =
+            "🌍 Live Earth map restored";
+
+    }
+
+}
+
+/* Show coordinates when the user taps/clicks the map. */
+map.on("click",function(event){
+
+    const lat = event.latlng.lat.toFixed(3);
+    const lon = event.latlng.lng.toFixed(3);
+
+    document.getElementById("mapLocation").textContent =
+        `📍 Location: ${lat}°, ${lon}°`;
+
+});
+
+
+/* =====================================================
    NIGHT OVERLAY
 ===================================================== */
 
@@ -2072,6 +2490,7 @@ updateMapTime();
 updateMapStatus();
 
 updateMapCities();
+updateSunMapMarker();
 
 
 /* =====================================================
@@ -2093,6 +2512,8 @@ setInterval(()=>{
     updateMapStatus();
 
     updateMapCities();
+
+    updateSunMapMarker();
 
     if(nightVisible){
 
@@ -2126,10 +2547,76 @@ window.addEventListener(
    ECLIPSE
 ===================================================== */
 
-document
-.getElementById("eclipseStatus")
-.textContent=
-"🌍 Eclipse Explorer ready — Sun and Moon alignment display active.";
+/* =====================================================
+   SOLAR ECLIPSE COUNTDOWN
+===================================================== */
+
+/*
+   Next worldwide solar eclipse:
+   6 February 2027 — Annular Solar Eclipse
+   Begins: 12:57:36 UTC
+
+   Next total solar eclipse:
+   2 August 2027 — begins globally at 07:30:11 UTC
+*/
+const nextSolarEclipse =
+    new Date("2027-02-06T12:57:36Z");
+
+function updateEclipseCountdown(){
+
+    const now = new Date();
+    let difference =
+        nextSolarEclipse.getTime() - now.getTime();
+
+    const status =
+        document.getElementById("eclipseStatus");
+
+    if(difference <= 0){
+
+        document.getElementById("eclipseDays").textContent = "0";
+        document.getElementById("eclipseHours").textContent = "0";
+        document.getElementById("eclipseMinutes").textContent = "0";
+        document.getElementById("eclipseSeconds").textContent = "0";
+
+        status.textContent =
+            "🌑 The next solar eclipse has started or has already passed.";
+
+        return;
+    }
+
+    const totalSeconds =
+        Math.floor(difference / 1000);
+
+    const days =
+        Math.floor(totalSeconds / 86400);
+
+    const hours =
+        Math.floor((totalSeconds % 86400) / 3600);
+
+    const minutes =
+        Math.floor((totalSeconds % 3600) / 60);
+
+    const seconds =
+        totalSeconds % 60;
+
+    document.getElementById("eclipseDays")
+        .textContent = days;
+
+    document.getElementById("eclipseHours")
+        .textContent = String(hours).padStart(2,"0");
+
+    document.getElementById("eclipseMinutes")
+        .textContent = String(minutes).padStart(2,"0");
+
+    document.getElementById("eclipseSeconds")
+        .textContent = String(seconds).padStart(2,"0");
+
+    status.textContent =
+        "🌑 Countdown to the next worldwide solar eclipse — 6 February 2027.";
+}
+
+updateEclipseCountdown();
+setInterval(updateEclipseCountdown,1000);
 
 
 /* =====================================================
