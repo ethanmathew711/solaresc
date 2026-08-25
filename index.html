@@ -1400,8 +1400,12 @@ footer{
             <div class="selected-grid">
                 <div><span>Coordinates</span><strong id="selectedCoords">—</strong></div>
                 <div><span>Local time</span><strong id="selectedTime">—</strong></div>
+                <div><span>Sunrise</span><strong id="selectedSunrise">—</strong></div>
+                <div><span>Sunset</span><strong id="selectedSunset">—</strong></div>
                 <div><span>Sun</span><strong id="selectedSun">—</strong></div>
                 <div><span>Solar altitude</span><strong id="selectedAltitude">—</strong></div>
+                <div><span>Solar azimuth</span><strong id="selectedAzimuth">—</strong></div>
+                <div><span>Day length</span><strong id="selectedDayLength">—</strong></div>
             </div>
         </div>
 
@@ -1915,14 +1919,6 @@ function updateClocks(list=cities){
                 }
             ).formatToParts(now);
 
-        const hourPart=
-            parts.find(
-                p=>p.type==="hour"
-            );
-
-        const hour=
-            Number(hourPart.value);
-
         timeElement.textContent=
             new Intl.DateTimeFormat(
                 "en-GB",
@@ -1935,9 +1931,10 @@ function updateClocks(list=cities){
                 }
             ).format(now);
 
+        const solar=getSolarPosition(item.lat,item.lon,now);
         statusElement.textContent=
-            hour>=6 && hour<18
-            ? "☀️ Daytime"
+            solar.elevation>-0.833
+            ? "☀️ Daylight"
             : "🌙 Night";
 
     });
@@ -2196,12 +2193,8 @@ function worldCitiesForMap(){
 
     cities.forEach(city=>{
 
-        const hour=
-            getHour(city.zone);
-
-        const isDay=
-            hour>=6 &&
-            hour<18;
+        const solar=getSolarPosition(city.lat,city.lon,new Date());
+        const isDay=solar.elevation>-0.833;
 
         const marker=
             L.marker(
@@ -2260,16 +2253,14 @@ function getCityTime(city){
             }
         ).format(now);
 
-    const hour=
-        getHour(city.zone);
+    const solar=getSolarPosition(city.lat,city.lon,now);
 
     return (
         time+
         " — "+
         (
-            hour>=6 &&
-            hour<18
-            ? "☀️ Daytime"
+            solar.elevation>-0.833
+            ? "☀️ Daylight"
             : "🌙 Nighttime"
         )
     );
@@ -2285,14 +2276,8 @@ function updateMapCities(){
 
     cityMarkers.forEach(data=>{
 
-        const hour=
-            getHour(
-                data.city.zone
-            );
-
-        const isDay=
-            hour>=6 &&
-            hour<18;
+        const solar=getSolarPosition(data.city.lat,data.city.lon,new Date());
+        const isDay=solar.elevation>-0.833;
 
         data.marker.setIcon(
             cityIcon(isDay)
@@ -2331,28 +2316,11 @@ function updateMapTime(){
 ===================================================== */
 
 function updateMapStatus(){
-
-    const hour=
-        new Date().getUTCHours();
-
-    let text;
-
-    if(hour>=6 && hour<18){
-
-        text=
-            "☀️ Daylight is moving across Earth";
-
-    }else{
-
-        text=
-            "🌙 Night is moving across Earth";
-
-    }
-
-    document
-    .getElementById("mapStatus")
-    .textContent=text;
-
+    const solar=getSolarPosition(0,0,new Date());
+    document.getElementById("mapStatus").textContent=
+        solar.elevation>0
+        ? "☀️ Daylight is moving across Earth"
+        : "🌙 Night is moving across Earth";
 }
 
 
@@ -2398,39 +2366,24 @@ let sunMapMarker = null;
 
 /* Create a glowing Sun marker at the approximate sub-solar point. */
 function getSunMapPosition(){
+    const now=new Date();
+    const year=now.getUTCFullYear();
+    const day=solarMathDay(now);
+    const days=isLeapYear(year)?366:365;
+    const hour=now.getUTCHours()+now.getUTCMinutes()/60+now.getUTCSeconds()/3600;
+    const gamma=2*Math.PI/days*(day-1+(hour-12)/24);
 
-    const now = new Date();
+    const eqtime=229.18*(0.000075+0.001868*Math.cos(gamma)-0.032077*Math.sin(gamma)
+        -0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma));
+    const decl=0.006918-0.399912*Math.cos(gamma)+0.070257*Math.sin(gamma)
+        -0.006758*Math.cos(2*gamma)+0.000907*Math.sin(2*gamma)
+        -0.002697*Math.cos(3*gamma)+0.00148*Math.sin(3*gamma);
 
-    const utcHours =
-        now.getUTCHours() +
-        now.getUTCMinutes()/60 +
-        now.getUTCSeconds()/3600;
+    let lon=-(hour*15+eqtime/4-180);
+    while(lon>180)lon-=360;
+    while(lon<-180)lon+=360;
 
-    /* Approximate solar longitude from UTC. */
-    let lon = 180 - (utcHours / 24) * 360;
-
-    while(lon > 180) lon -= 360;
-    while(lon < -180) lon += 360;
-
-    /* Seasonal solar declination approximation. */
-    const day =
-        Math.floor(
-            (Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate()
-            ) - Date.UTC(now.getUTCFullYear(),0,0)) /
-            86400000
-        );
-
-    const declination =
-        23.44 *
-        Math.sin(
-            (2*Math.PI/365) *
-            (day - 81)
-        );
-
-    return [declination, lon];
+    return [decl*180/Math.PI,lon];
 }
 
 function createSunMapMarker(){
@@ -2633,33 +2586,118 @@ function toggleEclipsePath(){
 }
 
 /* Show coordinates when the user taps/clicks the map. */
-function solarAltitude(lat, lon, date = new Date()){
-    const day = Math.floor(
-        (Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) -
-         Date.UTC(date.getUTCFullYear(),0,0)) / 86400000
-    );
+function isLeapYear(year){
+    return (year%4===0 && year%100!==0) || year%400===0;
+}
 
-    const decl =
-        23.44 * Math.sin((2*Math.PI/365) * (day - 81));
+function solarMathDay(date){
+    const year=date.getUTCFullYear();
+    return Math.floor(
+        (Date.UTC(year,date.getUTCMonth(),date.getUTCDate())-
+         Date.UTC(year,0,1))/86400000
+    )+1;
+}
 
-    const utcHours =
-        date.getUTCHours() +
-        date.getUTCMinutes()/60 +
-        date.getUTCSeconds()/3600;
+function getSolarPosition(lat,lon,date=new Date()){
+    const rad=Math.PI/180;
+    const year=date.getUTCFullYear();
+    const day=solarMathDay(date);
+    const days=isLeapYear(year)?366:365;
+    const hour=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600;
+    const gamma=2*Math.PI/days*(day-1+(hour-12)/24);
 
-    const sunLon = 180 - (utcHours/24)*360;
-    let hourAngle = sunLon - lon;
+    const eqtime=229.18*(0.000075+0.001868*Math.cos(gamma)-0.032077*Math.sin(gamma)
+        -0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma));
+    const decl=0.006918-0.399912*Math.cos(gamma)+0.070257*Math.sin(gamma)
+        -0.006758*Math.cos(2*gamma)+0.000907*Math.sin(2*gamma)
+        -0.002697*Math.cos(3*gamma)+0.00148*Math.sin(3*gamma);
 
-    while(hourAngle > 180) hourAngle -= 360;
-    while(hourAngle < -180) hourAngle += 360;
+    let tst=hour*60+eqtime+4*lon;
+    tst=((tst%1440)+1440)%1440;
+    let ha=tst/4-180;
+    if(ha<-180) ha+=360;
 
-    const rad = Math.PI/180;
-    const altitude = Math.asin(
-        Math.sin(lat*rad)*Math.sin(decl*rad) +
-        Math.cos(lat*rad)*Math.cos(decl*rad)*Math.cos(hourAngle*rad)
-    ) / rad;
+    const latR=lat*rad, haR=ha*rad;
+    const cosZ=Math.sin(latR)*Math.sin(decl)+Math.cos(latR)*Math.cos(decl)*Math.cos(haR);
+    const zenith=Math.acos(Math.max(-1,Math.min(1,cosZ)));
+    const elevation=90-zenith/rad;
 
-    return altitude;
+    let azimuth=0;
+    const den=Math.cos(latR)*Math.sin(zenith);
+    if(Math.abs(den)>1e-8){
+        const cosAz=(Math.sin(latR)*Math.cos(zenith)-Math.sin(decl))/den;
+        azimuth=Math.acos(Math.max(-1,Math.min(1,cosAz)))/rad;
+        if(ha>0) azimuth=360-azimuth;
+    }
+
+    return {elevation,azimuth,declination:decl/rad,equationOfTime:eqtime};
+}
+
+function solarAltitude(lat,lon,date=new Date()){
+    return getSolarPosition(lat,lon,date).elevation;
+}
+
+function getTimeZoneOffsetHours(zone,date=new Date()){
+    try{
+        const parts=new Intl.DateTimeFormat("en-GB",{
+            timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",
+            hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"
+        }).formatToParts(date);
+        const v={};
+        parts.forEach(x=>{if(x.type!=="literal")v[x.type]=Number(x.value);});
+        const zoned=Date.UTC(v.year,v.month-1,v.day,v.hour,v.minute,v.second);
+        return (zoned-date.getTime())/3600000;
+    }catch{return 0;}
+}
+
+function getSunriseSunset(lat,lon,date=new Date(),zone="UTC"){
+    const year=date.getUTCFullYear();
+    const day=solarMathDay(date);
+    const days=isLeapYear(year)?366:365;
+    const gamma=2*Math.PI/days*(day-1);
+
+    const eqtime=229.18*(0.000075+0.001868*Math.cos(gamma)-0.032077*Math.sin(gamma)
+        -0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma));
+    const decl=0.006918-0.399912*Math.cos(gamma)+0.070257*Math.sin(gamma)
+        -0.006758*Math.cos(2*gamma)+0.000907*Math.sin(2*gamma)
+        -0.002697*Math.cos(3*gamma)+0.00148*Math.sin(3*gamma);
+
+    const latR=lat*Math.PI/180;
+    const zenith=90.833*Math.PI/180;
+    const cosH=Math.cos(zenith)/(Math.cos(latR)*Math.cos(decl))-Math.tan(latR)*Math.tan(decl);
+    const offset=getTimeZoneOffsetHours(zone,date);
+
+    if(cosH>1||cosH<-1) return {sunrise:null,sunset:null,dayLength:null,polar:true};
+
+    const H=Math.acos(cosH)*180/Math.PI;
+    const noon=(720-4*lon-eqtime)/60;
+    const rise=noon-H*4/60;
+    const set=noon+H*4/60;
+
+    function localDate(utcHours){
+        const base=Date.UTC(year,0,1)+((day-1)*86400000);
+        return new Date(base+utcHours*3600000+offset*3600000);
+    }
+
+    return {
+        sunrise:localDate(rise),
+        sunset:localDate(set),
+        dayLength:(set-rise)*60,
+        polar:false
+    };
+}
+
+function formatClock(date,zone){
+    return date ? new Intl.DateTimeFormat("en-GB",{
+        timeZone:zone,hour:"2-digit",minute:"2-digit",hour12:false
+    }).format(date) : "—";
+}
+
+function formatDuration(seconds){
+    if(seconds==null)return "—";
+    const h=Math.floor(seconds/3600);
+    const m=Math.floor((seconds%3600)/60);
+    return `${h}h ${String(m).padStart(2,"0")}m`;
 }
 
 function findNearestCity(lat, lon){
@@ -2680,40 +2718,28 @@ function findNearestCity(lat, lon){
     return best;
 }
 
-function showLocationDetails(lat, lon, name = null, zone = null){
-    selectedMapLocation = {lat, lon, name, zone};
-    const nearest = findNearestCity(lat, lon);
-    const locationName = name || `Selected location`;
+function showLocationDetails(lat,lon,name=null,zone=null){
+    selectedMapLocation={lat,lon,name,zone};
 
-    document.getElementById("mapLocation").textContent =
-        `📍 ${locationName}`;
+    const nearest=findNearestCity(lat,lon);
+    const timeZone=zone||(nearest?nearest.zone:"UTC");
+    const now=new Date();
+    const solar=getSolarPosition(lat,lon,now);
+    const events=getSunriseSunset(lat,lon,now,timeZone);
+    const locationName=name||(nearest?`Near ${nearest.city}, ${nearest.country}`:"Selected location");
 
-    document.getElementById("selectedName").textContent =
-        nearest && !name
-            ? `Near ${nearest.city}, ${nearest.country}`
-            : locationName;
-
-    document.getElementById("selectedCoords").textContent =
-        `${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
-
-    const timeZone = zone || (nearest ? nearest.zone : "UTC");
-
-    document.getElementById("selectedTime").textContent =
-        new Intl.DateTimeFormat("en-GB", {
-            timeZone,
-            hour:"2-digit",
-            minute:"2-digit",
-            second:"2-digit",
-            hour12:false
-        }).format(new Date());
-
-    const altitude = solarAltitude(lat, lon);
-
-    document.getElementById("selectedAltitude").textContent =
-        `${altitude.toFixed(1)}°`;
-
-    document.getElementById("selectedSun").textContent =
-        altitude > 0 ? "☀️ Above horizon" : "🌙 Below horizon";
+    document.getElementById("mapLocation").textContent=`📍 ${locationName}`;
+    document.getElementById("selectedName").textContent=locationName;
+    document.getElementById("selectedCoords").textContent=`${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
+    document.getElementById("selectedTime").textContent=new Intl.DateTimeFormat("en-GB",{
+        timeZone:timeZone,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false
+    }).format(now);
+    document.getElementById("selectedSunrise").textContent=events.polar?"No sunrise":formatClock(events.sunrise,timeZone);
+    document.getElementById("selectedSunset").textContent=events.polar?"No sunset":formatClock(events.sunset,timeZone);
+    document.getElementById("selectedDayLength").textContent=events.polar?"Polar day/night":formatDuration(events.dayLength);
+    document.getElementById("selectedAltitude").textContent=`${solar.elevation.toFixed(1)}°`;
+    document.getElementById("selectedAzimuth").textContent=`${solar.azimuth.toFixed(1)}°`;
+    document.getElementById("selectedSun").textContent=solar.elevation>-0.833?"☀️ Daylight":"🌙 Night";
 }
 
 map.on("click",function(event){
@@ -2732,68 +2758,51 @@ let nightVisible=false;
 
 
 function createNightOverlay(){
-
-    if(nightOverlay){
-
-        map.removeLayer(
-            nightOverlay
-        );
-
-    }
+    if(nightOverlay)map.removeLayer(nightOverlay);
 
     const now=new Date();
+    const boundary=[];
 
-    const utcHours=
-        now.getUTCHours()+
-        now.getUTCMinutes()/60+
-        now.getUTCSeconds()/3600;
+    // Sample the true solar terminator (solar elevation = 0°).
+    for(let lon=-180;lon<=180;lon+=2){
+        let lo=-90,hi=90;
+        let flo=solarAltitude(lo,lon,now);
+        let fhi=solarAltitude(hi,lon,now);
 
-    let sunLongitude=
-        180-
-        (utcHours/24)*360;
-
-    while(
-        sunLongitude>180
-    ){
-        sunLongitude-=360;
-    }
-
-    while(
-        sunLongitude<-180
-    ){
-        sunLongitude+=360;
-    }
-
-
-    /*
-       Night hemisphere is approximately
-       opposite the Sun.
-    */
-
-    const nightCenter=
-        sunLongitude+180;
-
-    const points=[
-        [-85,nightCenter-90],
-        [-85,nightCenter+90],
-        [85,nightCenter+90],
-        [85,nightCenter-90]
-    ];
-
-
-    nightOverlay=
-        L.polygon(
-            points,
-            {
-                stroke:false,
-                fillColor:"#020611",
-                fillOpacity:.43,
-                interactive:false
+        if(flo*fhi<=0){
+            for(let i=0;i<28;i++){
+                const mid=(lo+hi)/2;
+                const fm=solarAltitude(mid,lon,now);
+                if(flo*fm<=0){hi=mid;fhi=fm;}
+                else{lo=mid;flo=fm;}
             }
-        ).addTo(map);
+            boundary.push([(lo+hi)/2,lon]);
+        }
+    }
 
+    if(boundary.length<20)return;
+
+    const night=[];
+    boundary.forEach(([lat,lon])=>night.push([lat,lon]));
+    night.push([-90,180],[-90,-180]);
+
+    // The polygon covers the hemisphere containing the anti-solar point.
+    const sun=getSunMapPosition();
+    const antiLon=sun[1]>0?sun[1]-180:sun[1]+180;
+    const antiLat=-sun[0];
+
+    if(antiLat<0){
+        night.reverse();
+        night.push([90,180],[90,-180]);
+    }
+
+    nightOverlay=L.polygon(night,{
+        stroke:false,
+        fillColor:"#020611",
+        fillOpacity:.48,
+        interactive:false
+    }).addTo(map);
 }
-
 
 function toggleNight(){
 
